@@ -1,0 +1,41 @@
+# CODEOWNERS file - автоматическое назначение ревьюеров
+
+# Default owners for everything
+* @your-github-username
+
+# Frontend code
+/src/app/**/*.tsx @frontend-lead
+/src/components/**/*.tsx @frontend-lead
+
+# Backend services
+/src/services/** @backend-lead
+
+# Banking service (критичный код)
+/src/services/banking/** @backend-lead @tech-lead
+
+# AI service (критичный код)
+/src/services/ai/** @backend-lead @tech-lead
+
+# Database schemas (требует особого внимания)
+/prisma/schema.prisma @backend-lead @tech-lead
+
+# CI/CD configuration (требует review от всех)
+/.github/workflows/** @tech-lead @backend-lead @frontend-lead
+
+# Infrastructure and configuration
+/vercel.json @tech-lead
+/docker-compose.yml @tech-lead
+/.env.example @tech-lead
+
+# Documentation
+/docs/** @tech-lead
+README.md @tech-lead
+
+# Dependencies (security critical)
+package.json @tech-lead
+package-lock.json @tech-lead
+
+# ИНСТРУКЦИЯ ПО ИСПОЛЬЗОВАНИЮ:
+# 1. Замени @your-github-username на свой GitHub username
+# 2. Если работаешь в команде, добавь username твоих коллег
+# 3. Если работаешь один, можешь удалить этот файл

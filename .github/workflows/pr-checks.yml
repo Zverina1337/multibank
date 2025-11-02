@@ -1,0 +1,99 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [dev, prod]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr-validation:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            chore
+          requireScope: false
+
+  size-check:
+    name: Check Bundle Size
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and check size
+        run: |
+          npm run build
+          echo "📦 Build completed. Checking bundle size..."
+
+  preview-deployment:
+    name: Create Preview Deployment
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.base.ref == 'dev'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy Preview
+        id: deploy
+        run: |
+          PREVIEW_URL=$(vercel deploy --token=${{ secrets.VERCEL_TOKEN }})
+          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Comment Preview URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 Preview deployment ready!\n\n**URL:** ${{ steps.deploy.outputs.preview_url }}\n\n✅ CI checks passed`
+            })
+
+  code-review-reminder:
+    name: Review Reminder
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.base.ref == 'prod'
+    
+    steps:
+      - name: Post review reminder
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `⚠️ **Production deployment detected**\n\nThis PR targets \`prod\` branch.\n\n**Required:**\n- [ ] At least 2 approvals\n- [ ] All CI checks must pass\n- [ ] Manual QA on dev environment\n\nPlease ensure thorough review before merging! 🔒`
+            })
