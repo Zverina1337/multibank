@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("STORAGE_DATABASE_URL")
+}
+
+model Bank {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String
+  clientId      String
+  clientSecret  String
+  authorizeUrl  String
+  tokenUrl      String
+  configId      String    @db.Uuid @unique
+  isActive      Boolean   @default(true)
+  
+  config        Config    @relation(fields: [configId], references: [id])
+  consents      Consent[]
+  user         User?    @relation(fields: [id], references: [id])
+  
+  @@map("bank")
+}
+
+model User {
+  id              String       @id @default(uuid()) @db.Uuid
+  role            String       // "user" or "admin"
+  username        String       @unique
+  phone           String       @unique
+  subscriptionId  Int?
+  
+  subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
+  consents        Consent[]
+  banks           Bank[]
+  
+  @@map("user")
+}
+
+
+model VerificationCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  phone     String
+  code      String
+  verified  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+
+  @@index([phone, code])
+  @@map("verification_code")
+}
+
+model Subscription {
+  id      Int      @id @default(autoincrement())
+  code    String   @unique
+  name    String
+  cost    Float
+  
+  users   User[]
+  
+  @@map("subscription")
+}
+
+model Consent {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  bankId        String    @db.Uuid
+  accessToken   String
+  refreshToken  String
+  expiresAt     DateTime
+  status        String
+  connectedAt   DateTime  @default(now())
+  lastSyncAt    DateTime?
+  scopeId       Int? 
+
+  user          User      @relation(fields: [userId], references: [id])
+  bank          Bank      @relation(fields: [bankId], references: [id])
+  scopes        Scope?    @relation(fields: [scopeId], references: [id])
+  
+  @@map("consent")
+}
+
+model Scope {
+  id       Int       @id @default(autoincrement())
+  code     String    @unique
+  name     String
+  
+  consents Consent[] 
+  
+  @@map("scope")
+}
+
+model Config {
+  id      String  @id @default(uuid()) @db.Uuid
+  apiUrl  String
+  config  Json    @db.JsonB
+  bankId  String  @db.Uuid 
+
+  bank    Bank?
+  
+  @@map("config")
+}
